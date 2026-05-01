@@ -11,6 +11,38 @@ health_bp = Blueprint("health", __name__)
 
 @health_bp.route("/health", methods=["GET"])
 def health():
+    """
+    Health check and system metrics
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: System health and metrics
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: healthy
+            model:
+              type: string
+              example: llama-3.3-70b-versatile
+            avg_response_time_ms:
+              type: number
+              example: 850.5
+            chroma_doc_count:
+              type: integer
+              example: 120
+            uptime_seconds:
+              type: integer
+              example: 3600
+            cache:
+              type: object
+              example:
+                hits: 10
+                misses: 5
+    """
     uptime = int(time.time() - start_time)
 
     return jsonify({

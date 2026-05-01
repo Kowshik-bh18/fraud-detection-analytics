@@ -11,7 +11,6 @@ report_bp = Blueprint("report", __name__)
 # ✅ Clean LLM JSON output
 def extract_json(response):
     try:
-        # remove ```json ``` if present
         response = re.sub(r"```json|```", "", response).strip()
 
         json_match = re.search(r'\{[\s\S]*\}', response)
@@ -57,7 +56,7 @@ Text:
     if parsed:
         return parsed
 
-    # fallback (safe response)
+    # fallback
     return {
         "title": "Fraud Analysis Report",
         "executive_summary": "Suspicious activity detected",
@@ -67,7 +66,7 @@ Text:
     }
 
 
-# ✅ Background job processing
+# ✅ Background job
 def process_job(job_id, text, webhook_url=None):
     try:
         result = generate_report_logic(text)
@@ -80,11 +79,15 @@ def process_job(job_id, text, webhook_url=None):
         # 🔥 WEBHOOK SUPPORT
         if webhook_url:
             try:
-                requests.post(webhook_url, json={
-                    "job_id": job_id,
-                    "status": "completed",
-                    "result": result
-                })
+                requests.post(
+                    webhook_url,
+                    json={
+                        "job_id": job_id,
+                        "status": "completed",
+                        "result": result
+                    },
+                    timeout=5   # ✅ important fix
+                )
             except Exception as e:
                 print("⚠️ Webhook failed:", e)
 
@@ -98,13 +101,39 @@ def process_job(job_id, text, webhook_url=None):
 # ✅ Create job
 @report_bp.route("/generate-report", methods=["POST"])
 def generate_report():
+    """
+    Generate fraud report asynchronously (background job)
+    ---
+    tags:
+      - Report
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            text:
+              type: string
+              example: Suspicious transaction detected in account
+            webhook_url:
+              type: string
+              example: https://your-app.onrender.com/webhook
+    responses:
+      200:
+        description: Job created successfully
+        examples:
+          application/json:
+            job_id: "abc123"
+            status: "processing"
+    """
     data = request.get_json()
 
     if not data or "text" not in data:
         return jsonify({"error": "text field is required"}), 400
 
     text = data["text"]
-    webhook_url = data.get("webhook_url")  # optional
+    webhook_url = data.get("webhook_url")
 
     job_id = create_job()
 
@@ -119,6 +148,30 @@ def generate_report():
 # ✅ Check job status
 @report_bp.route("/job-status/<job_id>", methods=["GET"])
 def job_status(job_id):
+    """
+    Get status of report generation job
+    ---
+    tags:
+      - Report
+    parameters:
+      - name: job_id
+        in: path
+        type: string
+        required: true
+        example: abc123
+    responses:
+      200:
+        description: Job status
+        examples:
+          application/json:
+            status: "completed"
+            result:
+              title: "Fraud Analysis Report"
+              executive_summary: "..."
+              overview: "..."
+              top_items: ["item1", "item2"]
+              recommendations: ["rec1", "rec2"]
+    """
     job = get_job(job_id)
 
     if not job:

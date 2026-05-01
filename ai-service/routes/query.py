@@ -21,6 +21,52 @@ def generate_cache_key(question):
 
 @query_bp.route("/query", methods=["POST"])
 def query():
+    """
+    Ask a question using RAG (Retrieval-Augmented Generation)
+    ---
+    tags:
+      - Query
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            question:
+              type: string
+              example: What are common fraud patterns in banking transactions?
+    responses:
+      200:
+        description: Answer generated using AI with supporting context
+        schema:
+          type: object
+          properties:
+            data:
+              type: object
+              properties:
+                answer:
+                  type: string
+                sources:
+                  type: array
+                  items:
+                    type: string
+            meta:
+              type: object
+              properties:
+                confidence:
+                  type: number
+                  example: 0.66
+                model_used:
+                  type: string
+                  example: llama-3.3-70b-versatile
+                tokens_used:
+                  type: integer
+                response_time_ms:
+                  type: integer
+                cached:
+                  type: boolean
+    """
     try:
         data = request.get_json()
 
